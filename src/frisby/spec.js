@@ -6,6 +6,14 @@ const fetch = require('node-fetch');
 const FormData = require('form-data');
 const TIMEOUT_DEFAULT = 5000;
 
+// Logger
+const log4js = require('log4js');
+log4js.configure({
+  appenders: { out: { type: 'stdout', layout: { type: 'messagePassThrough' } } },
+  categories: { default: { appenders: [ 'out' ], level: 'info' } }
+});
+const log = log4js.getLogger('cheese');
+
 // Frisby
 const FrisbyResponse = require('./response');
 const expectHandlers = require('./expects');
@@ -126,9 +134,31 @@ class FrisbySpec {
   fetch(url, params = {}, options = {}) {
     let fetchParams = this._fetchParams(params);
     this._request = new fetch.Request(this._formatUrl(url, options.urlEncode), fetchParams);
-
+    if(this._setupDefaults.requestLogger){
+      log.info('\nREQUEST:');
+      log.info('URL: ' + this._formatUrl(url, options.urlEncode));
+      log.info('credentials - ' + fetchParams.credentials);
+      log.info('rawBody - ' + fetchParams.rawBody);
+      log.info('inspectOnFailure - ' + fetchParams.inspectOnFailure);
+      if(!_.isEmpty(fetchParams.headers)){
+        log.info('Headers:\n' +  JSON.stringify(fetchParams.headers));
+      }
+      log.info('timeout - ' + fetchParams.timeout);
+      log.info('method - ' + fetchParams.method);
+      log.info('body:\n' + fetchParams.body);
+      if(!_.isEmpty(options)){
+        log.info(options);
+      }
+    }
     this._fetch = fetch(this._request, { timeout: this.timeout() }) // 'timeout' is a node-fetch option
       .then(response => {
+        if(this._setupDefaults.responseLogger){
+          log.info('\nRESPONSE:');
+          log.info(response.status);
+          log.info(response.statusText);
+          log.info(response.headers.raw());
+          log.info(response.url);
+        }
         this._response = new FrisbyResponse(response);
         if (this._setupDefaults.request && this._setupDefaults.request.rawBody) {
           return response.arrayBuffer()
@@ -152,6 +182,9 @@ class FrisbySpec {
           });
       })
       .then(() => {
+        if(this._setupDefaults.responseLogger){
+          log.info('Body:\n' + this._response.body);
+        }
         return this._response;
       });
 
