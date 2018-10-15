@@ -24,8 +24,8 @@ const _globalSetupDefaults = {
     inspectOnFailure: true,
     timeout: 5000,
   },
-  requestLogger: true,
-  responseLogger: true
+  requestLogger: false,
+  responseLogger: false
 };
 let _globalSetup = _.cloneDeep(_globalSetupDefaults);
 
